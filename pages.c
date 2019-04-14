@@ -38,6 +38,9 @@ pages_init(const char* path)
     void* pbm = get_pages_bitmap();
     bitmap_put(pbm, 0, 1);
     bitmap_put(pbm, 1, 1);
+
+    // set the cur_dir to root
+    cur_dir_inum = 0;
 }
 
 void

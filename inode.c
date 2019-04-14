@@ -67,6 +67,7 @@ int
 grow_inode(inode* node, int size)
 {
     //TODO: Grow the inode in a smarter way
+    // consult the size input and determine ptrs
     if (!node->ptrs[0]) {
         int pnum = alloc_page();
         node->ptrs[0] = pnum;

@@ -36,7 +36,8 @@ nufs_access(const char *path, int mask)
 	}
 
 	printf("access(%s, %04o) -> %d\n", path, mask, rv);
-	return rv;
+	//return rv;
+    return 0;
 }
 
 // implementation for: man 2 stat

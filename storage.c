@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <libgen.h>
 #include <string.h>
+#include <errno.h>
 
 #include "storage.h"
 #include "inode.h"
@@ -27,14 +28,17 @@ storage_init(const char* path)
 int
 storage_stat(const char* path, struct stat* st)
 {
-    int inum;
     // TODO: assuming root
+    // change to tree_lookup to account for not root
+    
+    int inum = tree_lookup(path);
+    /*
     if (streq(path, "/")) {
         inum =  0;
     }
     else {
         inum = directory_lookup(get_inode(0), path + 1);
-    }
+    }*/
 
     if (inum < 0) return inum;
     
@@ -54,6 +58,7 @@ storage_stat(const char* path, struct stat* st)
 int    
 storage_readdir(const char *path, void *buf, fuse_fill_dir_t filler)
 {
+    //TODO: account for path not being root
     struct stat st;
     int rv;
 
@@ -63,7 +68,7 @@ storage_readdir(const char *path, void *buf, fuse_fill_dir_t filler)
     rv = filler(buf, ".", &st, 0);
     assert(rv == 0);
 
-    slist* root_list = directory_list("");
+    slist* root_list = directory_list(path);
     slist* rlcpy = root_list;
 
     for(; rlcpy != NULL; rlcpy = rlcpy->next) {
@@ -85,6 +90,7 @@ storage_mknod(const char* path, int mode)
 
     if(node < 0) {
         //TODO: our inodes are full so we gotta do something maybe, who the heck knows
+        return -EDQUOT;
     }
     node->mode = mode;
 
@@ -139,6 +145,8 @@ storage_read(const char* path, char* buf, size_t size, off_t offset)
     char* page = pages_get_page(node->ptrs[0]);
 
     //TODO: ASSUMING LESS THAN 4k
+    // depending on the size, you would need to get
+    // multiple pages from the inode to read
     memcpy(buf, page + offset, size);
 
     return size;
@@ -163,7 +171,7 @@ storage_write(const char* path, const char* buf, size_t size, off_t offset)
 
 int
 storage_unlink(const char* path)
-{
+{ 
     int rv = 0;
 
     //add to dir_count in parent inode
@@ -206,7 +214,7 @@ storage_rename(const char *from, const char *to)
     if (rv < 0) {
         free(dn);
         free(bn);
-        printf("in storage_rename\n");
+        //printf("in storage_rename\n");
         return rv;
     }
 

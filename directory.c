@@ -1,6 +1,8 @@
 // based on cs3650 starter code
 
 #include <errno.h>
+#include <string.h>
+#include <libgen.h>
 
 #include "slist.h"
 #include "pages.h"
@@ -15,6 +17,7 @@ typedef struct dirent {
     char _reserved[12];
 } dirent;
 */
+
 
 static int 
 is_dir(inode* node)
@@ -45,9 +48,9 @@ directory_init()
 int 
 directory_lookup(inode* dd, const char* name)
 {
+    // TODO: make work with multiple pages
     if (!is_dir(dd)) return -ENOTDIR;
     dirent* d_entry = pages_get_page(dd->ptrs[0]);
-
 
     for (int i = 0; i < dd->dir_count; i++) {
         dirent* cur_ent = d_entry + i;
@@ -62,19 +65,35 @@ directory_lookup(inode* dd, const char* name)
 // returns inum
 int 
 tree_lookup(const char* path)
-{
-    if (streq(path, "/")) {
-        return 0;
+{ 
+    int inum = cur_dir_inum;
+    if (streq(path, "/") || streq(path, ".")) {
+        return inum;
     }
 
-    //TODO: Assuming root
-    return directory_lookup(get_inode(0), path + 1);
+    // now we start at the root and lookup nodes until we reach the current directory
+    // get a list of strings from the path
+    slist* path_list = s_split(path + 1, '/');
+    for (; path_list != NULL; path_list = path_list->next) {
+        if (inum == -ENOENT || inum == -ENOTDIR) {
+            return inum;
+        }
+        inode* dir = get_inode(inum);
+         
+        inum = directory_lookup(dir, path_list->data);
+    }
+    return inum;
 }
 
 int 
 directory_put(inode* dd, const char* name, int inum)
 {
-    //TODO: EEXIST if there is a file that exists with the same "name"
+    //TODO: make sure this works
+    // directory lookup the name to make sure it doesn't exist
+    int in = directory_lookup(dd, name);
+    if (in != -ENOENT) {
+        return -EEXIST;
+    }
     dirent* d_entry = (dirent *)pages_get_page(dd->ptrs[0]) + dd->dir_count;
     d_entry->inum = inum;
     strncpy(d_entry->name, name, 48);
@@ -87,10 +106,11 @@ directory_put(inode* dd, const char* name, int inum)
 slist*
 directory_list(const char* path)
 {
-    // TODO: actually use path, Assuming root
-    inode* dir = get_inode(0);
+    int inum = tree_lookup(path);
+    inode* dir = get_inode(inum);
     slist* list = 0;
 
+    // TODO: make sure this works with multiple pages??
     dirent* d_entry = pages_get_page(dir->ptrs[0]);
 
     for (int i = 0; i < dir->dir_count; i++) {
@@ -111,6 +131,7 @@ int
 directory_delete(inode* dd, const char* name)
 {
     //TODO: multi-page stuff needs to happen
+    //TODO: make recursive to account for directory trees
     int inum, i;
     dirent* cur_ent;
     if (!is_dir(dd)) return -ENOTDIR;
