@@ -82,6 +82,7 @@ tree_lookup(const char* path)
          
         inum = directory_lookup(dir, path_list->data);
     }
+    s_free(path_list);
     return inum;
 }
 

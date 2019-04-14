@@ -28,17 +28,7 @@ storage_init(const char* path)
 int
 storage_stat(const char* path, struct stat* st)
 {
-    // TODO: assuming root
-    // change to tree_lookup to account for not root
-    
     int inum = tree_lookup(path);
-    /*
-    if (streq(path, "/")) {
-        inum =  0;
-    }
-    else {
-        inum = directory_lookup(get_inode(0), path + 1);
-    }*/
 
     if (inum < 0) return inum;
     
@@ -58,7 +48,6 @@ storage_stat(const char* path, struct stat* st)
 int    
 storage_readdir(const char *path, void *buf, fuse_fill_dir_t filler)
 {
-    //TODO: account for path not being root
     struct stat st;
     int rv;
 
@@ -80,7 +69,6 @@ storage_readdir(const char *path, void *buf, fuse_fill_dir_t filler)
     return 0;
 }
 
-//TODO: Assuming root
 int    
 storage_mknod(const char* path, int mode)
 {
@@ -89,7 +77,6 @@ storage_mknod(const char* path, int mode)
     inode* node = get_inode(inum);
 
     if(node < 0) {
-        //TODO: our inodes are full so we gotta do something maybe, who the heck knows
         return -EDQUOT;
     }
     node->mode = mode;
@@ -101,6 +88,7 @@ storage_mknod(const char* path, int mode)
     char* drn = dirname(dn);
     char* brn = basename(bn);
 
+    // TODO: add support for "mkdir hello/nat/tuck"
     rv = tree_lookup(drn);
 
     if (rv < 0) {
