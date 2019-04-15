@@ -42,6 +42,9 @@ storage_stat(const char* path, struct stat* st)
 	st->st_uid = getuid();
 	st->st_gid = getgid();
 	st->st_size = node->size;
+    st->st_atime = node->atime.tv_sec;
+    st->st_mtime = node->mtime.tv_sec;
+    st->st_ctime = node->ctime.tv_sec;
 
     return 0;
 }
@@ -115,9 +118,12 @@ storage_truncate(const char *path, off_t size)
     }
     //TODO: Implement Multi-page support
     inode* node = get_inode(inum);
-
-    grow_inode(node, size);
-    node->size = size;
+    if (size >= node->size) {
+        grow_inode(node, size);
+    }
+    else if (size < node->size) {
+        shrink_inode(node, size);
+    }
     return 0;
 }
 
