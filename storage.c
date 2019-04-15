@@ -238,6 +238,11 @@ storage_rename(const char *from, const char *to)
     return rv;
 }
 
+int storage_set_time(const char* path, const struct timespec ts[2]) {
+    
+    return 0;
+}
+
 int storage_symlink(const char* file, const char* link) {
     int file_inum = tree_lookup(file);
     if (file_inum < 0) return file_inum;
