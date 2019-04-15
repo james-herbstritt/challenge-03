@@ -100,12 +100,10 @@ storage_mknod(const char* path, int mode)
     }
 
     inode* dir_inode = get_inode(rv);
-    printf("putting %s into dir %s\n", brn, drn);
     rv = directory_put(dir_inode, brn, inum);
 
     free(dn);
     free(bn);
-    printf("mknod directory put = %d\n", rv);
     return rv;
 }
 
@@ -278,7 +276,6 @@ int storage_symlink(const char* file, const char* link) {
 // reads the contents of a symbolic link
 int storage_readlink(const char* restrict path, char* restrict buf, size_t bufsize) {    
     // make sure bufsize is positive
-    printf("bufsize = %d\n", bufsize);
     if (bufsize < 0) return -EINVAL;
 
     // read the path from the link
@@ -287,13 +284,10 @@ int storage_readlink(const char* restrict path, char* restrict buf, size_t bufsi
 
     inode* link_inode = get_inode(link_inum);
 
-    printf("link_inode->mode = %d\n", link_inode->mode);
-    printf("link constant = %d\n", S_IFLNK);
     // check the mode to make sure this is a link
     if (link_inode->mode != S_IFLNK) return -EINVAL; 
 
     char* page = (char*) pages_get_page(link_inode->ptrs[0]);
     int rv = storage_read(page, buf, bufsize, 0);
-    printf("storage read returned = %d\n", rv);
     return 0;
 }
