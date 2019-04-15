@@ -21,6 +21,8 @@ int    storage_unlink(const char* path);
 int    storage_link(const char *from, const char *to);
 int    storage_rename(const char *from, const char *to);
 int    storage_set_time(const char* path, const struct timespec ts[2]);
+int storage_symlink(const char* from, const char* to);
+int storage_readlink(const char* restrict path, char* restrict buf, size_t bufsize);
 slist* storage_list(const char* path);
 
 #endif

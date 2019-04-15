@@ -58,7 +58,7 @@ directory_lookup(inode* dd, const char* name)
             return cur_ent->inum;
     }
 
-    printf("in dir lookup\n");
+    //printf("in dir lookup\n");
     return -ENOENT;
 }
 
@@ -70,10 +70,9 @@ tree_lookup(const char* path)
     if (streq(path, "/") || streq(path, ".")) {
         return inum;
     }
-
-    // now we start at the root and lookup nodes until we reach the current directory
-    // get a list of strings from the path
-    slist* path_list = s_split(path + 1, '/');
+    
+    if (path[0] == '/') path = path + 1;
+    slist* path_list = s_split(path, '/');
     for (; path_list != NULL; path_list = path_list->next) {
         if (inum == -ENOENT || inum == -ENOTDIR) {
             return inum;
@@ -151,12 +150,7 @@ found_ent:
         return inum;
     }
    
-    // decrement inode refs and remove if 0 
-    inode* node = get_inode(inum);
-    node->refs--;
-    if (!node->refs) {
-        free_inode(node);
-    }
+    free_inode(get_inode(inum));
     
     dirent* del_ent = cur_ent;
     dd->dir_count--;

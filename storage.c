@@ -237,3 +237,54 @@ storage_rename(const char *from, const char *to)
     free(tobn);
     return rv;
 }
+
+int storage_symlink(const char* file, const char* link) {
+    int file_inum = tree_lookup(file);
+    if (file_inum < 0) return file_inum;
+    
+    // make the symbolic link
+    int rv = storage_mknod(link, 012755); // are these the right permissions?
+    if (rv < 0) return rv;
+    
+    int link_inum = tree_lookup(link);
+    if (link_inum < 0) return link_inum; // this should never happen
+
+    inode* link_inode = get_inode(link_inum);
+    inode* file_inode = get_inode(file_inum);
+    // copy data ptrs
+    // FIXME: this data could be overwritten if we remove the original inode
+    link_inode->ptrs[0] = file_inode->ptrs[0];
+    link_inode->ptrs[1] = file_inode->ptrs[1];
+    link_inode->iptr = file_inode->iptr;
+    // FIXME: fuse is getting an io error for some reason
+    return 0;
+}
+
+//TODO
+// reads the contents of a symbolic link
+int storage_readlink(const char* restrict path, char* restrict buf, size_t bufsize) {
+    
+    // how is this different than reading normally?
+    int rv = storage_read(path, buf, bufsize, 0);
+
+    // returns the size of the buf written
+    return rv;
+
+    /*
+    FROM STORAGE_READ 
+        int inum = tree_lookup(path);
+        if (inum < 0) {
+            return inum;
+        }
+
+        inode* node = get_inode(inum);
+        char* page = pages_get_page(node->ptrs[0]);
+
+        //TODO: ASSUMING LESS THAN 4k
+        // depending on the size, you would need to get
+        // multiple pages from the inode to read
+        memcpy(buf, page + offset, size);
+
+        return size;
+    */
+}
