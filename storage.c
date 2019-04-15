@@ -88,10 +88,8 @@ storage_mknod(const char* path, int mode)
     char* drn = dirname(dn);
     char* brn = basename(bn);
 
-    // TODO: add support for "mkdir hello/nat/tuck"
     rv = tree_lookup(drn);
-
-    if (rv < 0) {
+    if (rv < 0) { 
         free(dn);
         free(bn);
         return rv;
