@@ -77,8 +77,7 @@ tree_lookup(const char* path)
         if (inum == -ENOENT || inum == -ENOTDIR) {
             return inum;
         }
-        inode* dir = get_inode(inum);
-         
+        inode* dir = get_inode(inum); 
         inum = directory_lookup(dir, path_list->data);
     }
     s_free(path_list);
