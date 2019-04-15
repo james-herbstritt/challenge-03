@@ -50,7 +50,7 @@ storage_readdir(const char *path, void *buf, fuse_fill_dir_t filler)
 {
     struct stat st;
     int rv;
-
+ 
     rv = storage_stat("/", &st);
     assert(rv == 0);
 
@@ -87,7 +87,7 @@ storage_mknod(const char* path, int mode)
 
     char* drn = dirname(dn);
     char* brn = basename(bn);
-
+    
     rv = tree_lookup(drn);
     if (rv < 0) { 
         free(dn);
@@ -155,8 +155,6 @@ storage_write(const char* path, const char* buf, size_t size, off_t offset)
     return size;
 }
 
-// TODO: decrement links field in inode and then try to delete. 
-// delete should only actually remove if there are no more links
 int
 storage_unlink(const char* path)
 { 

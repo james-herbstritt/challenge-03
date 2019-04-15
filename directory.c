@@ -89,7 +89,6 @@ tree_lookup(const char* path)
 int 
 directory_put(inode* dd, const char* name, int inum)
 {
-    //TODO: make sure this works
     // directory lookup the name to make sure it doesn't exist
     int in = directory_lookup(dd, name);
     if (in != -ENOENT) {
@@ -132,7 +131,6 @@ int
 directory_delete(inode* dd, const char* name)
 {
     //TODO: multi-page stuff needs to happen
-    //TODO: make recursive to account for directory trees
     int inum, i;
     dirent* cur_ent;
     if (!is_dir(dd)) return -ENOTDIR;
@@ -152,19 +150,26 @@ found_ent:
     if(inum < 0) {
         return inum;
     }
-
+   
+    // decrement inode refs and remove if 0 
+    inode* node = get_inode(inum);
+    node->refs--;
+    if (!node->refs) {
+        free_inode(node);
+    }
+    
     dirent* del_ent = cur_ent;
-    free_inode(get_inode(inum));
     dd->dir_count--;
 
     if (!dd->dir_count) {
         return 0;
     }
 
+    // copy last entry and move it to the deleted entry
     dirent* page = pages_get_page(dd->ptrs[0]);
     dirent* last = page + dd->dir_count;
-
     memcpy(del_ent, last, sizeof(dirent));
+
     return 0;
 }
 
