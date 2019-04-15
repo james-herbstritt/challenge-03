@@ -268,12 +268,10 @@ int storage_symlink(const char* file, const char* link) {
     inode* file_inode = get_inode(file_inum);
     // write the path to the data of this link
     // the path should never be greater than a page
-    
-    int path_length = strlen(file);
     link_inode->ptrs[0] = alloc_page();
-    link_inode->size = path_length;
+    link_inode->size = strlen(file);
     char* page = (char*) pages_get_page(link_inode->ptrs[0]);
-    strcpy(page, file, strlen(file));  
+    strcpy(page, file);  
     // FIXME: fuse is getting an io error for some reason
     return 0;
 }
