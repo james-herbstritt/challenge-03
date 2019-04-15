@@ -155,6 +155,8 @@ storage_write(const char* path, const char* buf, size_t size, off_t offset)
     return size;
 }
 
+// TODO: decrement links field in inode and then try to delete. 
+// delete should only actually remove if there are no more links
 int
 storage_unlink(const char* path)
 { 
@@ -182,6 +184,27 @@ storage_unlink(const char* path)
     free(dn);
     free(bn);
     return rv;
+}
+
+int 
+storage_link(const char* from, const char* to) 
+{ 
+    int from_inum = tree_lookup(from); 
+    if (from_inum == -ENOENT) {
+         // "from" does not exist -> cannot link
+         return from_inum;   
+    }  
+
+    char* dn = strdup(to);
+    char* bn = strdup(to);
+
+    char* drn = dirname(dn);
+    char* brn = basename(bn);
+
+    int to_inum = tree_lookup(drn);
+    inode* to_dir = get_inode(to_inum);
+
+    return directory_put(to_dir, brn, from_inum);
 }
 
 int
