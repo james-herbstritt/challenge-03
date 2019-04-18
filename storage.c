@@ -122,7 +122,7 @@ storage_truncate(const char *path, off_t size)
     if (size >= node->size) {
         grow_inode(node, size);
     }
-    else if (size < node->size) {
+    else {
         shrink_inode(node, size);
     }
     return 0;

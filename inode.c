@@ -7,6 +7,7 @@
 #include "directory.h"
 #include "pages.h"
 #include "bitmap.h"
+#include "util.h"
 
 /*
 typedef struct inode {
@@ -69,28 +70,42 @@ void free_inode(inode* node)
     long inum = node - base;
     bitmap_put(get_inode_bitmap(), inum, 0);
 
-    // TODO: does this work with symlinks? We don't want to overwrite 
-    // the data after losing this inode
     // TODO: make this a shrink inode call eventually
-    bitmap_put(get_pages_bitmap(), node->ptrs[0], 0);
-    bitmap_put(get_pages_bitmap(), node->ptrs[1], 0);
+    shrink_inode(node, 0);
 }
 
 int 
 grow_inode(inode* node, int size)
 {
-    //TODO: Test this 
+    int size_in_pages = bytes_to_pages(size);
+    int node_in_pages = bytes_to_pages(node->size);
+
     if (size < 0) {
         return -1; //invalid size
     }
 
-    if (node->size >= size) {
+    if (size_in_pages == node_in_pages) {
         node->size = size;
         return 0;
     }
 
+    if (node->size >= size) {
+        printf("How did you get here in grow_inode?\n");
+        return 0;
+    }
+
+
+    if (size_in_pages > 2 && !node->iptr) {
+        node->iptr = alloc_page();
+    }
+
+    for (int i = node_in_pages; i < size_in_pages; i++) {
+        inode_set_pnum(node, i, alloc_page());
+    }
+
+/*
     int pages_left = free_pages_count();
-    
+
     if (size <= PAGE_SIZE) {
         if (node->size == 0) {
             if (1 > pages_left) {
@@ -98,6 +113,7 @@ grow_inode(inode* node, int size)
             }
             node->ptrs[0] = alloc_page();
         }
+
         node->size = size;
         return 0;
     }
@@ -123,7 +139,6 @@ grow_inode(inode* node, int size)
     /* 
     if size is less than 
     total_disk_size - (size_for_inodes and size_for_bitmaps) 
-    */
     else if (size <= ((PAGE_SIZE * PAGE_NUM) - ((INUM_SIZE * PAGE_NUM) + 64))) {
         // number of pages that need to be allocated 
         int num_pages = ceil(size / PAGE_SIZE);
@@ -164,7 +179,7 @@ grow_inode(inode* node, int size)
     else {
         return -ENOMEM;
     }
-
+*/
     node->size = size;
     return 0;
 }
@@ -172,19 +187,65 @@ grow_inode(inode* node, int size)
 int 
 shrink_inode(inode* node, int size)
 {
+    int size_in_pages = bytes_to_pages(size);
+    int node_in_pages = bytes_to_pages(node->size);
+
     if (size < 0) {
         return -1; //invalid size
     }
-    if(node->size <= size) {
+
+    if (size_in_pages == node_in_pages) {
         node->size = size;
         return 0;
     }
 
+    if (node->size <= size) {
+        printf("How did you get here in shrink?\n");
+        return 0;
+    }
+
+    //free all the pages
+    for (int i = node_in_pages - 1; i >= size_in_pages; i--) {
+        free_page(inode_get_pnum(node, i)); 
+    }
+
+    // clean iptr  
+    if (size_in_pages <= 2 && node->iptr) {
+        free_page(node->iptr);
+        node->iptr = 0;
+    }
+
+    //clean direct pointers
+    if (size_in_pages < 2) {
+        node->ptrs[1] = 0;
+    }
+
+    if (size_in_pages < 1) {
+        node->ptrs[0] = 0;
+    }
+
+    node->size = size;
     return 0;
 }
 
 int 
 inode_get_pnum(inode* node, int fpn)
 {
-    return node->ptrs[fpn];
+    if (fpn < 2) {
+        return node->ptrs[fpn];
+    }
+    int* ipnum = pages_get_page(node->iptr);
+    return ipnum[fpn - 2];
+}
+
+void
+inode_set_pnum(inode* node, int fpn, int val)
+{
+    if (fpn < 2) {
+        node->ptrs[fpn] = val;
+    }
+    else {
+        int* ipnum = pages_get_page(node->iptr);
+        ipnum[fpn - 2] = val;
+    }
 }
