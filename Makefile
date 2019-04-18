@@ -18,7 +18,7 @@ clean: unmount
 
 mount: nufs
 	mkdir -p mnt || true
-	valgrind -v --leak-check=full ./nufs -s -f mnt data.nufs
+	./nufs -s -f mnt data.nufs
 
 unmount:
 	fusermount -u mnt || true
