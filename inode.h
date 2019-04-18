@@ -28,5 +28,6 @@ void free_inode(inode* node);
 int grow_inode(inode* node, int size);
 int shrink_inode(inode* node, int size);
 int inode_get_pnum(inode* node, int fpn);
+void inode_set_pnum(inode* node, int fpn, int val);
 
 #endif

@@ -65,12 +65,9 @@ void free_inode(inode* node)
 
     inode* base = get_inode_base();
     
-    //FIXME: probably wrong
-    //think this might be actually correct
     long inum = node - base;
     bitmap_put(get_inode_bitmap(), inum, 0);
 
-    // TODO: make this a shrink inode call eventually
     shrink_inode(node, 0);
 }
 
@@ -94,7 +91,6 @@ grow_inode(inode* node, int size)
         return 0;
     }
 
-
     if (size_in_pages > 2 && !node->iptr) {
         node->iptr = alloc_page();
     }
@@ -103,83 +99,6 @@ grow_inode(inode* node, int size)
         inode_set_pnum(node, i, alloc_page());
     }
 
-/*
-    int pages_left = free_pages_count();
-
-    if (size <= PAGE_SIZE) {
-        if (node->size == 0) {
-            if (1 > pages_left) {
-                return -ENOMEM;
-            }
-            node->ptrs[0] = alloc_page();
-        }
-
-        node->size = size;
-        return 0;
-    }
-
-    else if (size <= (PAGE_SIZE * 2)) {
-        if (node->size == 0) {
-            if (2 > pages_left) {
-                return -ENOMEM;
-            }
-            node->ptrs[0] = alloc_page();    
-            node->ptrs[1] = alloc_page();
-        }
-        else if (node->size <= PAGE_SIZE) {
-            if (1 > pages_left) {
-                return -ENOMEM;
-            }
-            node->ptrs[1] = alloc_page();
-        }
-            node->size = size;
-            return 0;
-    }
-
-    /* 
-    if size is less than 
-    total_disk_size - (size_for_inodes and size_for_bitmaps) 
-    else if (size <= ((PAGE_SIZE * PAGE_NUM) - ((INUM_SIZE * PAGE_NUM) + 64))) {
-        // number of pages that need to be allocated 
-        int num_pages = ceil(size / PAGE_SIZE);
-        int cur_pages = ceil(node->size / PAGE_SIZE);
-
-        if (node->size == 0) {
-            if (num_pages > pages_left) {
-                return -ENOMEM;
-            }
-            node->ptrs[0] = alloc_page();    
-            node->ptrs[1] = alloc_page();
-            node->iptr = alloc_page();
-            cur_pages += 2;
-        }
-        else if (node->size <= PAGE_SIZE) {
-            if (num_pages - 1 > pages_left) {
-                return -ENOMEM;
-            }
-            node->ptrs[1] = alloc_page();
-            node->iptr = alloc_page();
-            cur_pages++;
-        }
-
-        else if (node->size <= PAGE_SIZE * 2) {
-            if (num_pages - 2 > pages_left) {
-                return -ENOMEM;
-            }
-            node->iptr = alloc_page();
-        }
-        num_pages -= 2;
-
-        int* indir_page = pages_get_page(node->iptr);
-        for (int i = cur_pages; i < num_pages; i++) {
-            indir_page[i] = alloc_page();
-        }
-    }
-
-    else {
-        return -ENOMEM;
-    }
-*/
     node->size = size;
     return 0;
 }
