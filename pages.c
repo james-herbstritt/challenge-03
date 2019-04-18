@@ -36,8 +36,16 @@ pages_init(const char* path)
     assert(pages_base != MAP_FAILED);
 
     void* pbm = get_pages_bitmap();
+    //first page contains bitmaps
+    //next five pages are for inodes
+
+    // note max pages left for indirect pointer is 250
     bitmap_put(pbm, 0, 1);
     bitmap_put(pbm, 1, 1);
+    bitmap_put(pbm, 2, 1);
+    bitmap_put(pbm, 3, 1);
+    bitmap_put(pbm, 4, 1);
+    bitmap_put(pbm, 5, 1);
 
     // set the cur_dir to root
     cur_dir_inum = 0;
@@ -96,7 +104,7 @@ free_page(int pnum)
 void*
 get_pages_base() 
 {
-    uint8_t* base = pages_get_page(2);
+    uint8_t* base = pages_get_page(6);
     return (void *)base;
 }
 
@@ -105,4 +113,18 @@ get_inode_base()
 {
     uint8_t* page = pages_get_page(0);
     return (void*)(page + 64);
+}
+
+int
+free_pages_count()
+{
+    int counter = 0;
+
+    for (int i = 0; i < 256; i++) {
+        if (bitmap_get(get_pages_bitmap(),i) == 0) {
+            counter++;
+        }
+    }
+
+    return counter;
 }
