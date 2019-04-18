@@ -96,17 +96,14 @@ storage_mknod(const char* path, int mode)
     if (rv < 0) { 
         free(dn);
         free(bn);
-        printf("mknod tree_lookup rv = %d\n", rv);
         return rv;
     }
 
     inode* dir_inode = get_inode(rv);
-
     rv = directory_put(dir_inode, brn, inum);
 
     free(dn);
     free(bn);
-    printf("mknod directory put = %d\n", rv);
     return rv;
 }
 
@@ -264,39 +261,33 @@ int storage_symlink(const char* file, const char* link) {
     if (file_inum < 0) return file_inum;
     
     // make the symbolic link
-    int rv = storage_mknod(link, 120000); // are these the right permissions?
+    int rv = storage_mknod(link, S_IFLNK); 
     if (rv < 0) return rv;
     
     int link_inum = tree_lookup(link);
-    if (link_inum < 0) return link_inum; // this should never happen
-
     inode* link_inode = get_inode(link_inum);
-    inode* file_inode = get_inode(file_inum);
-    // write the path to the data of this link
-    // the path should never be greater than a page
     link_inode->ptrs[0] = alloc_page();
     link_inode->size = strlen(file);
-    char* page = (char*) pages_get_page(link_inode->ptrs[0]);
-    strcpy(page, file);  
-    // FIXME: fuse is getting an io error for some reason
+   
+    storage_write(link, file, strlen(file), 0);
     return 0;
 }
 
 // reads the contents of a symbolic link
 int storage_readlink(const char* restrict path, char* restrict buf, size_t bufsize) {    
     // make sure bufsize is positive
-    if (bufsize < 0) return EINVAL;
+    if (bufsize < 0) return -EINVAL;
 
     // read the path from the link
-    int link_inum = tree_lookup(link);
+    int link_inum = tree_lookup(path);
     if (link_inum < 0) return link_inum;
 
     inode* link_inode = get_inode(link_inum);
 
     // check the mode to make sure this is a link
-    if (link_inode->mode & 012000) return EINVAL; 
+    if (link_inode->mode != S_IFLNK) return -EINVAL; 
 
     char* page = (char*) pages_get_page(link_inode->ptrs[0]);
-    printf("readlink reads the link as: %s\n", page);
-    return storage_read(page, buf, bufsize, 0);
+    int rv = storage_read(page, buf, bufsize, 0);
+    return 0;
 }
