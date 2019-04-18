@@ -55,7 +55,7 @@ storage_readdir(const char *path, void *buf, fuse_fill_dir_t filler)
     struct stat st;
     int rv;
  
-    rv = storage_stat("/", &st);
+    rv = storage_stat(path, &st);
     assert(rv == 0);
 
     rv = filler(buf, ".", &st, 0);
@@ -134,14 +134,26 @@ storage_read(const char* path, char* buf, size_t size, off_t offset)
     }
 
     inode* node = get_inode(inum);
-    char* page = pages_get_page(node->ptrs[0]);
+    size = min(node->size, size);
 
-    //TODO: ASSUMING LESS THAN 4k
-    // depending on the size, you would need to get
-    // multiple pages from the inode to read
-    memcpy(buf, page + offset, size);
+    int start = offset / 4096;
+    int end = bytes_to_pages(offset + size);
+    int page_offset = offset % 4096;
+    int to_buf = 0;
+    int left = size;
 
-    return size;
+    for (int i = start; i < end; i++) {
+        int pnum = inode_get_pnum(node, i);
+        char* page = pages_get_page(pnum);
+        int len = min(4096 - page_offset, left);
+
+        memcpy(buf + to_buf, page + page_offset, len);
+        to_buf += len;
+        left = size - to_buf;
+        page_offset = 0;
+    }
+
+    return to_buf;
 }
 
 int   
@@ -152,15 +164,28 @@ storage_write(const char* path, const char* buf, size_t size, off_t offset)
         return inum;
     }
 
-    storage_truncate(path, size);
+    storage_truncate(path, size + offset);
     inode* node = get_inode(inum);
-    char* page = pages_get_page(node->ptrs[0]);
 
-    //TODO: ASSUMING LESS THAN 4k
-    memcpy(page + offset, buf, size);
-    return size;
-}
+    int start = offset / 4096;
+    int end = bytes_to_pages(offset + size);
+    int page_offset = offset % 4096;
+    int from_buf = 0;
+    int left = size;
 
+    for (int i = start; i < end; i++) {
+        int pnum = inode_get_pnum(node, i);
+        char* page = pages_get_page(pnum);
+        int len = min(4096 - page_offset, left);
+
+        memcpy(page + page_offset, buf + from_buf, len);
+        from_buf += len;
+        left = size - from_buf;
+        page_offset = 0;
+    }
+
+    return from_buf;
+} 
 int
 storage_unlink(const char* path)
 { 
@@ -194,7 +219,7 @@ int
 storage_link(const char* from, const char* to) 
 { 
     int from_inum = tree_lookup(from); 
-    if (from_inum == -ENOENT) {
+    if (from_inum < 0) {
          // "from" does not exist -> cannot link
          return from_inum;   
     }  
@@ -208,6 +233,8 @@ storage_link(const char* from, const char* to)
     int to_inum = tree_lookup(drn);
     inode* to_dir = get_inode(to_inum);
 
+    free(dn);
+    free(bn);
     return directory_put(to_dir, brn, from_inum);
 }
 
@@ -227,7 +254,6 @@ storage_rename(const char *from, const char *to)
     if (rv < 0) {
         free(dn);
         free(bn);
-        //printf("in storage_rename\n");
         return rv;
     }
 

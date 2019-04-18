@@ -3,12 +3,14 @@
 #include <errno.h>
 #include <string.h>
 #include <libgen.h>
+#include <assert.h>
 
 #include "slist.h"
 #include "pages.h"
 #include "inode.h"
 #include "directory.h"
 #include "util.h"
+#include "bitmap.h"
 
 /*
 typedef struct dirent {
@@ -19,6 +21,16 @@ typedef struct dirent {
 */
 
 
+static dirent *
+directory_nth_dirent(inode* node, int n)
+{
+    assert(n < node->dir_count);
+    int page_offset = n % 64;
+    int page_num = n / 64; 
+    int abs_pnum = inode_get_pnum(node, page_num);
+    dirent* dir_page = pages_get_page(abs_pnum);
+    return dir_page + page_offset;
+}
 static int 
 is_dir(inode* node)
 {
@@ -48,17 +60,12 @@ directory_init()
 int 
 directory_lookup(inode* dd, const char* name)
 {
-    // TODO: make work with multiple pages
     if (!is_dir(dd)) return -ENOTDIR;
-    dirent* d_entry = pages_get_page(dd->ptrs[0]);
-
     for (int i = 0; i < dd->dir_count; i++) {
-        dirent* cur_ent = d_entry + i;
-        if (streq(name, cur_ent->name))
-            return cur_ent->inum;
+        dirent* cur_ent = directory_nth_dirent(dd, i);
+        if (streq(name, cur_ent->name)) return cur_ent->inum;
     }
 
-    //printf("in dir lookup\n");
     return -ENOENT;
 }
 
@@ -66,19 +73,23 @@ directory_lookup(inode* dd, const char* name)
 int 
 tree_lookup(const char* path)
 { 
-    int inum = cur_dir_inum;
-    if (streq(path, "/") || streq(path, ".")) {
-        return inum;
+    int inum;
+    inode* root_ptr = get_inode(0);
+    if (streq(path, "/")) {
+        return 0;
     }
     
-    if (path[0] == '/') path = path + 1;
     slist* path_list = s_split(path, '/');
-    for (; path_list != NULL; path_list = path_list->next) {
-        if (inum == -ENOENT || inum == -ENOTDIR) {
+    slist* cpy = path_list->next;
+
+    inode* dir = root_ptr; 
+    for (;cpy  ; cpy = cpy->next) {
+        inum = directory_lookup(dir, cpy->data);
+        if (inum < 0) {
+            s_free(path_list);
             return inum;
         }
-        inode* dir = get_inode(inum); 
-        inum = directory_lookup(dir, path_list->data);
+        dir = get_inode(inum);
     }
     s_free(path_list);
     return inum;
@@ -89,13 +100,21 @@ directory_put(inode* dd, const char* name, int inum)
 {
     // directory lookup the name to make sure it doesn't exist
     int in = directory_lookup(dd, name);
+
     if (in != -ENOENT) {
         return -EEXIST;
     }
-    dirent* d_entry = (dirent *)pages_get_page(dd->ptrs[0]) + dd->dir_count;
+
+    if (dd->dir_count % 64 == 0) {
+        int rv = grow_inode(dd, dd->size + 4096);
+        if (rv < 0) {
+            return rv;
+        }
+    }
+    dd->dir_count++;
+    dirent* d_entry = directory_nth_dirent(dd,dd->dir_count - 1);
     d_entry->inum = inum;
     strncpy(d_entry->name, name, 48);
-    dd->dir_count++;
     inode* node = get_inode(inum);
     node->refs++;
     return 0;
@@ -106,13 +125,10 @@ directory_list(const char* path)
 {
     int inum = tree_lookup(path);
     inode* dir = get_inode(inum);
-    slist* list = 0;
-
-    // TODO: make sure this works with multiple pages??
-    dirent* d_entry = pages_get_page(dir->ptrs[0]);
+    slist* list = NULL;
 
     for (int i = 0; i < dir->dir_count; i++) {
-        dirent* cur_ent = d_entry + i;
+        dirent* cur_ent = directory_nth_dirent(dir, i);
         list = s_cons(cur_ent->name , list);
     }
 

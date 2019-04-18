@@ -5,8 +5,6 @@
 
 #include <stdio.h>
 
-int cur_dir_inum;
-
 void pages_init(const char* path);
 void pages_free();
 void* pages_get_page(int pnum);

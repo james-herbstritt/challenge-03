@@ -26,8 +26,8 @@ typedef struct inode {
 void 
 print_inode(inode* node) 
 {
-    printf("refs: %d\n", node->refs);
-    printf("mode: %d\n", node->mode);
+    printf("refs: %o\n", node->refs);
+    printf("mode: %o\n", node->mode);
     printf("size: %d\n", node->size);
     printf("prt[0]: %d\n", node->ptrs[0]);
     printf("prt[1]: %d\n", node->ptrs[1]);
@@ -52,6 +52,8 @@ alloc_inode()
     for(int i = 0; i < 256; i++) {
         if(!bitmap_get(bm, i)) {
             bitmap_put(bm, i, 1);
+
+            printf("+ alloc_inode() -> %d\n", i);
             return i;
         }
     }
@@ -74,20 +76,16 @@ void free_inode(inode* node)
 int 
 grow_inode(inode* node, int size)
 {
+    printf("+ grow_inode(%d) -> 0\n", size);
     int size_in_pages = bytes_to_pages(size);
     int node_in_pages = bytes_to_pages(node->size);
 
-    if (size < 0) {
+    if (size < 0 || node->size >= size) {
         return -1; //invalid size
     }
 
     if (size_in_pages == node_in_pages) {
         node->size = size;
-        return 0;
-    }
-
-    if (node->size >= size) {
-        printf("How did you get here in grow_inode?\n");
         return 0;
     }
 
