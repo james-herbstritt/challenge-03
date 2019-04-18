@@ -69,6 +69,8 @@ void free_inode(inode* node)
     long inum = node - base;
     bitmap_put(get_inode_bitmap(), inum, 0);
 
+    // TODO: does this work with symlinks? We don't want to overwrite 
+    // the data after losing this inode
     // TODO: make this a shrink inode call eventually
     bitmap_put(get_pages_bitmap(), node->ptrs[0], 0);
     bitmap_put(get_pages_bitmap(), node->ptrs[1], 0);

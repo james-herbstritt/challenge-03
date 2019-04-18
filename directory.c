@@ -58,7 +58,7 @@ directory_lookup(inode* dd, const char* name)
             return cur_ent->inum;
     }
 
-    printf("in dir lookup\n");
+    //printf("in dir lookup\n");
     return -ENOENT;
 }
 
@@ -70,10 +70,9 @@ tree_lookup(const char* path)
     if (streq(path, "/") || streq(path, ".")) {
         return inum;
     }
-
-    // now we start at the root and lookup nodes until we reach the current directory
-    // get a list of strings from the path
-    slist* path_list = s_split(path + 1, '/');
+    
+    if (path[0] == '/') path = path + 1;
+    slist* path_list = s_split(path, '/');
     for (; path_list != NULL; path_list = path_list->next) {
         if (inum == -ENOENT || inum == -ENOTDIR) {
             return inum;
@@ -89,7 +88,6 @@ tree_lookup(const char* path)
 int 
 directory_put(inode* dd, const char* name, int inum)
 {
-    //TODO: make sure this works
     // directory lookup the name to make sure it doesn't exist
     int in = directory_lookup(dd, name);
     if (in != -ENOENT) {
@@ -132,7 +130,6 @@ int
 directory_delete(inode* dd, const char* name)
 {
     //TODO: multi-page stuff needs to happen
-    //TODO: make recursive to account for directory trees
     int inum, i;
     dirent* cur_ent;
     if (!is_dir(dd)) return -ENOTDIR;
@@ -152,19 +149,21 @@ found_ent:
     if(inum < 0) {
         return inum;
     }
-
-    dirent* del_ent = cur_ent;
+   
     free_inode(get_inode(inum));
+    
+    dirent* del_ent = cur_ent;
     dd->dir_count--;
 
     if (!dd->dir_count) {
         return 0;
     }
 
+    // copy last entry and move it to the deleted entry
     dirent* page = pages_get_page(dd->ptrs[0]);
     dirent* last = page + dd->dir_count;
-
     memcpy(del_ent, last, sizeof(dirent));
+
     return 0;
 }
 
