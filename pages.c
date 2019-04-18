@@ -111,17 +111,3 @@ get_inode_base()
     uint8_t* page = pages_get_page(0);
     return (void*)(page + 64);
 }
-
-int
-free_pages_count()
-{
-    int counter = 0;
-
-    for (int i = 0; i < 256; i++) {
-        if (bitmap_get(get_pages_bitmap(),i) == 0) {
-            counter++;
-        }
-    }
-
-    return counter;
-}

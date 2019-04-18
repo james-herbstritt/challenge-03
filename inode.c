@@ -107,17 +107,12 @@ shrink_inode(inode* node, int size)
     int size_in_pages = bytes_to_pages(size);
     int node_in_pages = bytes_to_pages(node->size);
 
-    if (size < 0) {
+    if (size < 0 || node->size <= size) {
         return -1; //invalid size
     }
 
     if (size_in_pages == node_in_pages) {
         node->size = size;
-        return 0;
-    }
-
-    if (node->size <= size) {
-        printf("How did you get here in shrink?\n");
         return 0;
     }
 

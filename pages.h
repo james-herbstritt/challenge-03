@@ -14,6 +14,5 @@ void* get_inode_bitmap();
 void* get_inode_base();
 int alloc_page();
 void free_page(int pnum);
-int free_pages_count();
 
 #endif

@@ -51,7 +51,6 @@ directory_init()
     node->ptrs[1] = 0;
     node->iptr = 0;
     node->dir_count = 0;
-    // TODO: grow the inode maybe
     grow_inode(node, 4096);
     return inum;
 }

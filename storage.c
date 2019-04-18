@@ -114,7 +114,7 @@ storage_truncate(const char *path, off_t size)
     if (inum < 0) {
         return inum;
     }
-    //TODO: Implement Multi-page support
+
     inode* node = get_inode(inum);
     if (size >= node->size) {
         grow_inode(node, size);
